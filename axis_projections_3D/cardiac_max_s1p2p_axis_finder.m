@@ -39,10 +39,12 @@ function [axes_angles] = cardiac_max_s1p2p_axis_finder(avg_s1_xyz)
 % elevation_scg = elevation_mat
 % radius_scg = radius_mat
 
-% NOTE 2: The axis maximising average S1 p2p is defined by convention as pointing towards the anterior hemipshere (whereas in V1 it was defined in the northern/cranial hemisphere).
+% NOTE 2: The axis maximising average S1 p2p is defined by convention as pointing towards the anterior hemipshere.
+
+flag_plot = 1; % Plot flag. If 0, no plots are produced. If 1, only final plot is produced. If 2, all plots are produced.
 
 
-%% S1 Peak Amplitude Spherical Projection
+%% 1. S1 Peak Amplitude Spherical Projection
     
 % Considering S1 peak amplitude (not p2p amplitude) to then create a spherical mapping of S1 peak amplitude across elevation and azimuth. 
 % S1 p2p amplitude is then the sum of the antipodal S1 peak amplitudes.
@@ -94,7 +96,7 @@ s1_p_z_scg = -1*s1_p_y_mat;
 clear s1_p_x_mat s1_p_y_mat s1_p_z_mat
 
 
-%% Calculating the S1 peak-to-peak Amplitude (i.e. the antipodal distance) for each combination of elevation and azimuthal angle.
+%% 2. Calculating the S1 peak-to-peak Amplitude (i.e. the antipodal distance) for each combination of elevation and azimuthal angle.
 s1_p_antipodal_sum_sph_mat = zeros(181, 180); % Initialization for speed
 
 for el_mat = -90:1:90 % Considering the anterior hemisphere (only a single hemisphere needs to be considered as the p2p amplitude captures also the opposing hemisphere).
@@ -118,7 +120,7 @@ end
 clear el_mat idx_el_mat az_mat idx_az_mat el_antipode_mat az_antipode_mat idx_el_antipode_mat idx_az_antipode_mat
 
 
-%% Finding the angle combination maximising S1 p2p amplitude.
+%% 3. Finding the angle combination maximising S1 p2p amplitude.
 
 % Finding maximum S1 p2p amplitude and the elevation and azimuthal angles which produce it (i.e.maximum S1 p antipodal sum).
 max_s1_p2p = max(max(s1_p_antipodal_sum_sph_mat));
@@ -128,10 +130,10 @@ el_max_s1_p2p_sph_mat = idx_el_max_s1_p2p_sph - 91; % The actual elevation angle
 az_max_s1_p2p_sph_mat = idx_az_max_s1_p2p_sph - 180; % The actual azimuthal angle (in the Matlab reference frame) maximising S1 p2p.
 
 % Finding the elevation and azimuth angles of the antipode (in the posterior hemisphere) of the point maximising S1 p2p amplitude (in the anterior hemisphere).
-[max_s1_p2p_el_antipode_sph_mat, max_s1_p2p_az_antipode_sph_mat] = antipodal_calculator(el_max_s1_p2p_sph_mat, az_max_s1_p2p_sph_mat);
+[el_max_s1_p2p_antipode_sph_mat, az_max_s1_p2p_antipode_sph_mat] = antipodal_calculator(el_max_s1_p2p_sph_mat, az_max_s1_p2p_sph_mat);
 
 
-%% Finding the angle combination minimising S1 p2p amplitude.
+%% 4. Finding the angle combination minimising S1 p2p amplitude.
 
 % Finding the minimum S1 p2p amplitude and the elevation and azimuthal angles which produce it (i.e. minimum S1 p antipodal sum)
 min_s1_p2p = min(s1_p_antipodal_sum_sph_mat, [], 'all');
@@ -143,44 +145,51 @@ az_min_s1_p2p_sph_mat = idx_min_s1_p2p_az_sph - 180; % The actual azimuthal angl
 % Finding the antipode (in the posterior hemisphere) of the point minimising S1 p2p amplitude (in the anterior hemisphere).
 [el_min_s1_p2p_antipode_sph_mat, az_min_s1_p2p_antipode_sph_mat] = antipodal_calculator(el_min_s1_p2p_sph_mat, az_min_s1_p2p_sph_mat);
 
-
-%% Plotting
-
-% Plotting the S1 peak amplitude spherical projection map (i.e. in 2D)
-figure; surf(s1_p_sph_mat); title('S1 Peak Amplitude Spherical Projection Map'); xlabel('Azimuthal Angle (Degrees) {Matlab Reference Frame}'); xticks([0 40 80 120 160 200 240 280 320 360]); xticklabels({-180, -140, -100, -60, -20, 20, 60, 100, 140, 180}); ylabel('Elevation Angle (Degrees) {Matlab Reference Frame}'); yticks([1 21 41 61 81 101 121 141 161 181]); yticklabels({-90,-70,-50,-30,-10,10,30,50,70,90}); zlabel('S1 Peak Amplitude (mg)'); shading interp
-
-% Plotting the S1 peak-to-peak amplitude hemispherical projection map (i.e.the S1 peak amplitude antipodal summation).
-figure; surf(s1_p_antipodal_sum_sph_mat); title('S1 P2P Amplitude (Anterior) Hemispherical Projection Map (= S1 Peak Antipodal Summation)');  xlabel('Azimuthal Angle (Degrees) {SCG Reference Frame}'); xticks([0 20 40 60 80 100 120 140 160 180]); xticklabels({180, 160, 140, 120, 100, 80, 60, 40, 20, 0}); ylabel('Elevation (Degrees) {SCG Reference Frame}'); yticks([0 11 21 31 41 51 61 71 81 91 101 111 121 131 141 151 161 171 181]); yticklabels({-90,-80,-70,-60,-50,-40,-30,-20,-10,0,10,20,30,40,50,60,70,80,90}); zlabel('S1 Peak-to-Peak Amplitude (mg)'); shading interp;
-hold on; plot3(idx_az_max_s1_p2p_sph, idx_el_max_s1_p2p_sph, max_s1_p2p,'r.','MarkerSize',30); legend('S1 P2P Amplitude', 'Max S1 P2P Amplitude')
-hold on; plot3(idx_min_s1_p2p_az_sph, idx_min_s1_p2p_el_sph, min_s1_p2p,'g.','MarkerSize',30); legend('S1 P2P Amplitude', 'Max S1 P2P Amplitude' , 'Min S1 P2P Amplitude')
-
-% Plotting the S1 acceleration trajectory, the S1 peak amplitude spherical projection (in 3D), and highlighting the axes maximising and minimising S1 p2p.
-figure; plot3(avg_s1_xyz(:,1),avg_s1_xyz(:,3),avg_s1_xyz(:,2),'k','LineWidth',2); % S1 acceleration trajectory.
-hold on; surface(s1_p_x_scg, s1_p_z_scg, s1_p_y_scg, sqrt(s1_p_x_scg.^2 + s1_p_z_scg.^2 + s1_p_y_scg.^2),'FaceAlpha',0.5,'EdgeAlpha',0); title('S1 Peak Amplitude Projection'); xlabel('x (mg)'); ylabel('z (mg)'); zlabel('y (mg)'); hcb = colorbar; hcb.Title.String = "S1 Peak Amplitude (mg)"; hold on; % S1 Peak Amplitude Projection.
-
 % Adjusting the indices of max and min S1 peak amplitudes and their antipodes for 's1_p_sph' and 's1_p_x/y/z'.
-idx_el_max_s1_p2p_antipode_sph = max_s1_p2p_el_antipode_sph_mat + 91;
-idx_az_max_s1_p2p_antipode_sph = max_s1_p2p_az_antipode_sph_mat + 180;
+idx_el_max_s1_p2p_antipode_sph = el_max_s1_p2p_antipode_sph_mat + 91;
+idx_az_max_s1_p2p_antipode_sph = az_max_s1_p2p_antipode_sph_mat + 180;
 
 idx_el_min_s1_p2p_antipode_sph = el_min_s1_p2p_antipode_sph_mat + 91;
 idx_az_min_s1_p2p_antipode_sph = az_min_s1_p2p_antipode_sph_mat + 180;
 
-hold on; plot3([s1_p_x_scg(idx_el_max_s1_p2p_sph, idx_az_max_s1_p2p_sph); s1_p_x_scg(idx_el_max_s1_p2p_antipode_sph, idx_az_max_s1_p2p_antipode_sph)],[s1_p_z_scg(idx_el_max_s1_p2p_sph, idx_az_max_s1_p2p_sph); s1_p_z_scg(idx_el_max_s1_p2p_antipode_sph, idx_az_max_s1_p2p_antipode_sph)],[s1_p_y_scg(idx_el_max_s1_p2p_sph, idx_az_max_s1_p2p_sph); s1_p_y_scg(idx_el_max_s1_p2p_antipode_sph, idx_az_max_s1_p2p_antipode_sph)],'r--','LineWidth',3);
-hold on; plot3([s1_p_x_scg(idx_min_s1_p2p_el_sph, idx_min_s1_p2p_az_sph); s1_p_x_scg(idx_el_min_s1_p2p_antipode_sph, idx_az_min_s1_p2p_antipode_sph)],[s1_p_z_scg(idx_min_s1_p2p_el_sph, idx_min_s1_p2p_az_sph); s1_p_z_scg(idx_el_min_s1_p2p_antipode_sph, idx_az_min_s1_p2p_antipode_sph)],[s1_p_y_scg(idx_min_s1_p2p_el_sph, idx_min_s1_p2p_az_sph); s1_p_y_scg(idx_el_min_s1_p2p_antipode_sph, idx_az_min_s1_p2p_antipode_sph)],'b--','LineWidth',3); legend('S1 Acceleration Trajectory','S1 Peak Amplitude Projection','Max S1 p2p Axis','Min S1 p2p Axis');
-clear hcb
 
-min_lim = min(min([s1_p_x_scg; s1_p_y_scg; s1_p_z_scg])); max_lim = max(max(([s1_p_x_scg; s1_p_y_scg; s1_p_z_scg])));
-xlim([min_lim(1) max_lim(1)]); ylim([min_lim(1) max_lim(1)]); zlim([min_lim(1) max_lim(1)]);
+%% 5. Plotting
+if flag_plot == 2
 
-clear max_lim min_lim
+    % Plotting the S1 peak amplitude spherical projection map (i.e. in 2D)
+    figure; 
+    surf(s1_p_sph_mat); title('S1 Peak Amplitude Spherical Projection Map'); xlabel('Azimuthal Angle (Degrees) {Matlab Reference Frame}'); xticks([0 40 80 120 160 200 240 280 320 360]); xticklabels({-180, -140, -100, -60, -20, 20, 60, 100, 140, 180}); ylabel('Elevation Angle (Degrees) {Matlab Reference Frame}'); yticks([1 21 41 61 81 101 121 141 161 181]); yticklabels({-90,-70,-50,-30,-10,10,30,50,70,90}); zlabel('S1 Peak Amplitude (mg)'); shading interp
+
+    % Plotting the S1 peak-to-peak amplitude hemispherical projection map (i.e.the S1 peak amplitude antipodal summation).
+    figure; 
+    surf(s1_p_antipodal_sum_sph_mat); title('S1 P2P Amplitude (Anterior) Hemispherical Projection Map (= S1 Peak Antipodal Summation)');  xlabel('Azimuthal Angle (Degrees) {SCG Reference Frame}'); xticks([0 20 40 60 80 100 120 140 160 180]); xticklabels({180, 160, 140, 120, 100, 80, 60, 40, 20, 0}); ylabel('Elevation (Degrees) {SCG Reference Frame}'); yticks([0 11 21 31 41 51 61 71 81 91 101 111 121 131 141 151 161 171 181]); yticklabels({-90,-80,-70,-60,-50,-40,-30,-20,-10,0,10,20,30,40,50,60,70,80,90}); zlabel('S1 Peak-to-Peak Amplitude (mg)'); shading interp;
+    hold on; plot3(idx_az_max_s1_p2p_sph, idx_el_max_s1_p2p_sph, max_s1_p2p,'r.','MarkerSize',30); legend('S1 P2P Amplitude', 'Max S1 P2P Amplitude')
+    hold on; plot3(idx_min_s1_p2p_az_sph, idx_min_s1_p2p_el_sph, min_s1_p2p,'g.','MarkerSize',30); legend('S1 P2P Amplitude', 'Max S1 P2P Amplitude' , 'Min S1 P2P Amplitude')
+
+end
+
+if flag_plot == 1 % Plotting the S1 acceleration trajectory, the S1 peak amplitude spherical projection (in 3D), and highlighting the axes maximising and minimising S1 p2p.
+ 
+    figure; 
+    plot3(avg_s1_xyz(:,1),avg_s1_xyz(:,3),avg_s1_xyz(:,2),'k','LineWidth',2); % S1 acceleration trajectory.
+    hold on; surface(s1_p_x_scg, s1_p_z_scg, s1_p_y_scg, sqrt(s1_p_x_scg.^2 + s1_p_z_scg.^2 + s1_p_y_scg.^2),'FaceAlpha',0.5,'EdgeAlpha',0); title('S1 Peak Amplitude Projection'); xlabel('x (mg)'); ylabel('z (mg)'); zlabel('y (mg)'); hcb = colorbar; hcb.Title.String = "S1 Peak Amplitude (mg)"; hold on; % S1 Peak Amplitude Projection.
+    hold on; plot3([s1_p_x_scg(idx_el_max_s1_p2p_sph, idx_az_max_s1_p2p_sph); s1_p_x_scg(idx_el_max_s1_p2p_antipode_sph, idx_az_max_s1_p2p_antipode_sph)],[s1_p_z_scg(idx_el_max_s1_p2p_sph, idx_az_max_s1_p2p_sph); s1_p_z_scg(idx_el_max_s1_p2p_antipode_sph, idx_az_max_s1_p2p_antipode_sph)],[s1_p_y_scg(idx_el_max_s1_p2p_sph, idx_az_max_s1_p2p_sph); s1_p_y_scg(idx_el_max_s1_p2p_antipode_sph, idx_az_max_s1_p2p_antipode_sph)],'r--','LineWidth',3);
+    hold on; plot3([s1_p_x_scg(idx_min_s1_p2p_el_sph, idx_min_s1_p2p_az_sph); s1_p_x_scg(idx_el_min_s1_p2p_antipode_sph, idx_az_min_s1_p2p_antipode_sph)],[s1_p_z_scg(idx_min_s1_p2p_el_sph, idx_min_s1_p2p_az_sph); s1_p_z_scg(idx_el_min_s1_p2p_antipode_sph, idx_az_min_s1_p2p_antipode_sph)],[s1_p_y_scg(idx_min_s1_p2p_el_sph, idx_min_s1_p2p_az_sph); s1_p_y_scg(idx_el_min_s1_p2p_antipode_sph, idx_az_min_s1_p2p_antipode_sph)],'b--','LineWidth',3); legend('S1 Acceleration Trajectory','S1 Peak Amplitude Projection','Max S1 p2p Axis','Min S1 p2p Axis');
+    clear hcb
+
+    min_lim = min(min([s1_p_x_scg; s1_p_y_scg; s1_p_z_scg])); max_lim = max(max(([s1_p_x_scg; s1_p_y_scg; s1_p_z_scg])));
+    xlim([min_lim(1) max_lim(1)]); ylim([min_lim(1) max_lim(1)]); zlim([min_lim(1) max_lim(1)]);
+
+    clear max_lim min_lim
+end
 
 
-%% Troubleshooting - Calclating max and min distances (should equal max S1 p2p and min S1 p2p, respectively).
+%% 6. Troubleshooting - Calclating max and min distances (should equal max S1 p2p and min S1 p2p, respectively).
 max_distance = sqrt( (s1_p_x_scg(idx_el_max_s1_p2p_sph, idx_az_max_s1_p2p_sph) - s1_p_x_scg(idx_el_max_s1_p2p_antipode_sph, idx_az_max_s1_p2p_antipode_sph)).^2 + (s1_p_z_scg(idx_el_max_s1_p2p_sph, idx_az_max_s1_p2p_sph) - s1_p_z_scg(idx_el_max_s1_p2p_antipode_sph, idx_az_max_s1_p2p_antipode_sph)).^2 + (s1_p_y_scg(idx_el_max_s1_p2p_sph, idx_az_max_s1_p2p_sph) - s1_p_y_scg(idx_el_max_s1_p2p_antipode_sph, idx_az_max_s1_p2p_antipode_sph)).^2 );
 min_distance = sqrt( (s1_p_x_scg(idx_min_s1_p2p_el_sph, idx_min_s1_p2p_az_sph) - s1_p_x_scg(idx_el_min_s1_p2p_antipode_sph, idx_az_min_s1_p2p_antipode_sph)).^2 + (s1_p_z_scg(idx_min_s1_p2p_el_sph, idx_min_s1_p2p_az_sph) - s1_p_z_scg(idx_el_min_s1_p2p_antipode_sph, idx_az_min_s1_p2p_antipode_sph)).^2 + (s1_p_y_scg(idx_min_s1_p2p_el_sph, idx_min_s1_p2p_az_sph) - s1_p_y_scg(idx_el_min_s1_p2p_antipode_sph, idx_az_min_s1_p2p_antipode_sph)).^2 );
 
 
-%% Converting the function output angles into the SCG reference frame.
+%% 7. Converting the function output angles into the SCG reference frame.
 el_max_s1_p2p = el_max_s1_p2p_sph_mat;
 az_max_s1_p2p = -1*az_max_s1_p2p_sph_mat;
 el_min_s1_p2p = el_min_s1_p2p_sph_mat;
@@ -202,10 +211,13 @@ el_antipode = -1*el;
 
 if az < 0
     az_antipode = az + 180;
+
 elseif az > 0
     az_antipode = az - 180;
+
 elseif az == 0
     az_antipode = 180;
 end
+
 end
 
